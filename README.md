@@ -1,45 +1,210 @@
-Overview
-========
+# Airflow + Cosmos + dbt ELT
 
-Welcome to Astronomer! This project was generated after you ran 'astro dev init' using the Astronomer CLI. This readme describes the contents of the project, as well as how to run Apache Airflow on your local machine.
+Projeto local de ELT com Apache Airflow, Astronomer Cosmos, dbt e Postgres.
 
-Project Contents
-================
+A DAG principal orquestra um pipeline dbt em camadas:
 
-Your Astro project contains the following files and folders:
+- `staging`
+- `intermediate`
+- `marts`
 
-- dags: This folder contains the Python files for your Airflow DAGs. By default, this directory includes one example DAG:
-    - `example_astronauts`: This DAG shows a simple ETL pipeline example that queries the list of astronauts currently in space from the Open Notify API and prints a statement for each astronaut. The DAG uses the TaskFlow API to define tasks in Python, and dynamic task mapping to dynamically print a statement for each astronaut. For more on how this DAG works, see our [Getting started tutorial](https://www.astronomer.io/docs/learn/get-started-with-airflow).
-- Dockerfile: This file contains a versioned Astro Runtime Docker image that provides a differentiated Airflow experience. If you want to execute other commands or overrides at runtime, specify them here.
-- include: This folder contains any additional files that you want to include as part of your project. It is empty by default.
-- packages.txt: Install OS-level packages needed for your project by adding them to this file. It is empty by default.
-- requirements.txt: Install Python packages needed for your project by adding them to this file. It is empty by default.
-- plugins: Add custom or community plugins for your project to this file. It is empty by default.
-- airflow_settings.yaml: Use this local-only file to specify Airflow Connections, Variables, and Pools instead of entering them in the Airflow UI as you develop DAGs in this project.
+Dag principal:
 
-Deploy Your Project Locally
-===========================
+```text
+banking_medallion_cosmos_pipeline
+```
 
-Start Airflow on your local machine by running 'astro dev start'.
+## Pre-requisitos
 
-This command will spin up five Docker containers on your machine, each for a different Airflow component:
+Instale e deixe rodando:
 
-- Postgres: Airflow's Metadata Database
-- Scheduler: The Airflow component responsible for monitoring and triggering tasks
-- DAG Processor: The Airflow component responsible for parsing DAGs
-- API Server: The Airflow component responsible for serving the Airflow UI and API
-- Triggerer: The Airflow component responsible for triggering deferred tasks
+- Docker Desktop
+- Astronomer CLI (`astro`)
 
-When all five containers are ready the command will open the browser to the Airflow UI at http://localhost:8080/. You should also be able to access your Postgres Database at 'localhost:5432/postgres' with username 'postgres' and password 'postgres'.
+Para conferir se o `astro` esta instalado:
 
-Note: If you already have either of the above ports allocated, you can either [stop your existing Docker containers or change the port](https://www.astronomer.io/docs/astro/cli/troubleshoot-locally#ports-are-not-available-for-my-local-airflow-webserver).
+```powershell
+astro version
+```
 
-Deploy Your Project to Astronomer
-=================================
+Entre na pasta do projeto:
 
-If you have an Astronomer account, pushing code to a Deployment on Astronomer is simple. For deploying instructions, refer to Astronomer documentation: https://www.astronomer.io/docs/astro/deploy-code/
+```powershell
+cd "C:\Users\Felipe\Desktop\Felipe\Estudos\airflow-cosmos-dbt-elt"
+```
 
-Contact
-=======
+## Subir o Airflow local
 
-The Astronomer CLI is maintained with love by the Astronomer team. To report a bug or suggest a change, reach out to our support.
+```powershell
+astro dev start
+```
+
+Esse comando sobe os containers locais do Airflow:
+
+- Postgres
+- Scheduler
+- DAG Processor
+- API Server / UI
+- Triggerer
+
+A UI do Airflow fica em:
+
+```text
+http://localhost:8080
+```
+
+Login padrao:
+
+```text
+usuario: admin
+senha: admin
+```
+
+## Comandos uteis do Airflow
+
+Listar DAGs:
+
+```powershell
+astro dev run dags list
+```
+
+Disparar a DAG principal:
+
+```powershell
+astro dev run dags trigger banking_medallion_cosmos_pipeline
+```
+
+Ver logs dos containers:
+
+```powershell
+astro dev logs
+```
+
+Entrar no shell do container Airflow:
+
+```powershell
+astro dev bash
+```
+
+Parar o ambiente:
+
+```powershell
+astro dev stop
+```
+
+Parar e remover os volumes locais:
+
+```powershell
+astro dev kill
+```
+
+Use `astro dev kill` quando quiser limpar o banco local do Airflow/Postgres e recomecar do zero.
+
+## Rodar comandos dbt
+
+O dbt deste projeto roda dentro de um virtualenv criado no container:
+
+```text
+/usr/local/airflow/dbt_venv/bin/dbt
+```
+
+Com o Airflow ja rodando, entre no container:
+
+```powershell
+astro dev bash
+```
+
+Dentro do container, rode:
+
+```bash
+cd /usr/local/airflow/dbt
+/usr/local/airflow/dbt_venv/bin/dbt deps --profiles-dir .
+/usr/local/airflow/dbt_venv/bin/dbt debug --profiles-dir .
+/usr/local/airflow/dbt_venv/bin/dbt seed --profiles-dir .
+/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir .
+/usr/local/airflow/dbt_venv/bin/dbt test --profiles-dir .
+```
+
+Comando completo para recriar tudo:
+
+```bash
+cd /usr/local/airflow/dbt
+/usr/local/airflow/dbt_venv/bin/dbt deps --profiles-dir .
+/usr/local/airflow/dbt_venv/bin/dbt seed --profiles-dir .
+/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir . --full-refresh
+/usr/local/airflow/dbt_venv/bin/dbt test --profiles-dir .
+```
+
+## Ver o pipeline/grafo do dbt
+
+O comando que gera a documentacao e o grafo do dbt e:
+
+```bash
+dbt docs generate
+```
+
+Neste projeto, rode dentro do container:
+
+```powershell
+astro dev bash
+```
+
+Depois:
+
+```bash
+cd /usr/local/airflow/dbt
+/usr/local/airflow/dbt_venv/bin/dbt deps --profiles-dir .
+/usr/local/airflow/dbt_venv/bin/dbt docs generate --profiles-dir .
+```
+
+Isso cria os arquivos da documentacao em:
+
+```text
+dbt/target
+```
+
+Para abrir no navegador pelo Windows/PowerShell, em outro terminal local:
+
+```powershell
+cd "C:\Users\Felipe\Desktop\Felipe\Estudos\airflow-cosmos-dbt-elt\dbt\target"
+python -m http.server 8081
+```
+
+Abra:
+
+```text
+http://localhost:8081
+```
+
+Na pagina do dbt Docs, use a area de lineage/grafo para ver o pipeline visual.
+
+## Estrutura principal
+
+```text
+dags/
+  banking_medallion_cosmos_pipeline.py
+
+dbt/
+  dbt_project.yml
+  profiles.yml
+  seeds/
+  models/
+    staging/
+    intermediate/
+    marts/
+```
+
+## Conexao local
+
+O Airflow usa a connection local:
+
+```text
+conn_id: postgres_dbt
+host: postgres
+database: postgres
+user: postgres
+password: postgres
+port: 5432
+```
+
+As variaveis locais ficam no arquivo `.env`, que nao deve ser enviado para o GitHub.
