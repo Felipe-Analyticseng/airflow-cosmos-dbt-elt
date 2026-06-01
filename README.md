@@ -33,7 +33,19 @@ Entre na pasta do projeto:
 cd "C:\Users\Felipe\Desktop\Felipe\Estudos\airflow-cosmos-dbt-elt"
 ```
 
-## Subir o Airflow local
+## Roteiro da demonstracao
+
+Sequencia sugerida para apresentar o lab:
+
+1. Subir o ambiente Astro.
+2. Rodar o dbt geral.
+3. Rodar o dbt por camadas.
+4. Gerar e abrir o dbt Docs para mostrar o grafo.
+5. Abrir o Airflow no navegador e disparar a DAG.
+
+## 1. Subir o ambiente Astro
+
+No PowerShell, dentro da pasta do projeto:
 
 ```powershell
 astro dev start
@@ -47,22 +59,195 @@ Esse comando sobe os containers locais do Airflow:
 - API Server / UI
 - Triggerer
 
-A UI do Airflow fica em:
-
-```text
-http://localhost:8080
-```
-
 Se a porta `8080` estiver ocupada, o Astro mostra outra URL no terminal, por exemplo `http://localhost:11131`.
 
-Login padrao:
+Login padrao do Airflow:
 
 ```text
 usuario: admin
 senha: admin
 ```
 
-## Comandos uteis do Airflow
+## 2. Entrar no container do Airflow
+
+Com o Astro rodando, entre no shell do container:
+
+```powershell
+astro dev bash
+```
+
+Dentro do container, entre na pasta do projeto dbt:
+
+```bash
+cd /usr/local/airflow/dbt
+```
+
+O executavel do dbt esta em:
+
+```text
+/usr/local/airflow/dbt_venv/bin/dbt
+```
+
+Para limpar o terminal dentro do container:
+
+```bash
+clear
+```
+
+## 3. dbt rodando geral
+
+Dentro do container, rode:
+
+```bash
+cd /usr/local/airflow/dbt
+/usr/local/airflow/dbt_venv/bin/dbt debug --profiles-dir .
+/usr/local/airflow/dbt_venv/bin/dbt seed --profiles-dir .
+/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir .
+/usr/local/airflow/dbt_venv/bin/dbt test --profiles-dir .
+```
+
+Opcional, para recriar as tabelas do zero:
+
+```bash
+/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir . --full-refresh
+```
+
+## 4. dbt rodando por camadas
+
+Rodar somente a camada `staging`:
+
+```bash
+/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir . --select staging
+```
+
+Rodar somente a camada `intermediate`:
+
+```bash
+/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir . --select intermediate
+```
+
+Rodar somente a camada `marts`:
+
+```bash
+/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir . --select marts
+```
+
+Rodar as camadas em sequencia para a demo:
+
+```bash
+cd /usr/local/airflow/dbt
+/usr/local/airflow/dbt_venv/bin/dbt seed --profiles-dir .
+/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir . --select staging
+/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir . --select intermediate
+/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir . --select marts
+/usr/local/airflow/dbt_venv/bin/dbt test --profiles-dir .
+```
+
+## 5. Gerar e servir o dbt Docs
+
+Dentro do container, gere a documentacao e o grafo:
+
+```bash
+cd /usr/local/airflow/dbt
+/usr/local/airflow/dbt_venv/bin/dbt docs generate --profiles-dir .
+```
+
+O comando acima gera os arquivos em:
+
+```text
+/usr/local/airflow/dbt/target
+```
+
+Saia do container:
+
+```bash
+exit
+```
+
+No PowerShell, copie o `target` gerado no container para a pasta local do projeto.
+
+Primeiro veja o id/nome do container:
+
+```powershell
+docker ps
+```
+
+Depois copie o `target`, trocando `<container_id>` pelo id do container onde voce rodou o `dbt docs generate`:
+
+```powershell
+docker cp <container_id>:/usr/local/airflow/dbt/target .\dbt\target
+```
+
+Entre na pasta local do `target`:
+
+```powershell
+cd "C:\Users\Felipe\Desktop\Felipe\Estudos\airflow-cosmos-dbt-elt\dbt\target"
+```
+
+Sirva os arquivos no navegador:
+
+```powershell
+python -m http.server 8081
+```
+
+Se `python` nao funcionar no Windows, use:
+
+```powershell
+py -m http.server 8081
+```
+
+Abra no navegador:
+
+```text
+http://localhost:8081
+```
+
+Na pagina do dbt Docs, use a area de lineage/grafo para mostrar o pipeline visual.
+
+Observacao: o comando abaixo tambem existe, mas dentro do Docker/Astro pode falhar por porta ou bind de rede:
+
+```bash
+/usr/local/airflow/dbt_venv/bin/dbt docs serve --profiles-dir .
+```
+
+Por isso, para a demo, o fluxo mais confiavel e:
+
+```text
+dbt docs generate -> docker cp target -> python -m http.server 8081
+```
+
+## 6. Ativar o Airflow e rodar no browser
+
+Abra a UI do Airflow no navegador.
+
+URL padrao:
+
+```text
+http://localhost:8080
+```
+
+Se o Astro mostrar outra URL no terminal, use a URL exibida por ele.
+
+Login:
+
+```text
+admin
+admin
+```
+
+Na UI:
+
+1. Procure a DAG `banking_medallion_cosmos_pipeline`.
+2. Abra a DAG.
+3. Clique no botao de play/trigger para executar.
+4. Acompanhe pela Grid ou Graph View.
+5. Clique nas tasks para ver os logs.
+
+Tambem da para disparar pelo terminal:
+
+```powershell
+astro dev run dags trigger banking_medallion_cosmos_pipeline
+```
 
 Listar DAGs:
 
@@ -70,10 +255,10 @@ Listar DAGs:
 astro dev run dags list
 ```
 
-Disparar a DAG principal:
+Ver erros de importacao de DAG:
 
 ```powershell
-astro dev run dags trigger banking_medallion_cosmos_pipeline
+astro dev run dags list-import-errors
 ```
 
 Ver logs dos containers:
@@ -82,11 +267,7 @@ Ver logs dos containers:
 astro dev logs
 ```
 
-Entrar no shell do container Airflow:
-
-```powershell
-astro dev bash
-```
+## Parar ou limpar o ambiente
 
 Parar o ambiente:
 
@@ -94,91 +275,13 @@ Parar o ambiente:
 astro dev stop
 ```
 
-Parar e remover os volumes locais:
+Parar e remover volumes locais:
 
 ```powershell
 astro dev kill
 ```
 
 Use `astro dev kill` quando quiser limpar o banco local do Airflow/Postgres e recomecar do zero.
-
-## Rodar comandos dbt
-
-O dbt deste projeto roda dentro de um virtualenv criado no container:
-
-```text
-/usr/local/airflow/dbt_venv/bin/dbt
-```
-
-Com o Airflow ja rodando, entre no container:
-
-```powershell
-astro dev bash
-```
-
-Dentro do container, rode:
-
-```bash
-cd /usr/local/airflow/dbt
-/usr/local/airflow/dbt_venv/bin/dbt deps --profiles-dir .
-/usr/local/airflow/dbt_venv/bin/dbt debug --profiles-dir .
-/usr/local/airflow/dbt_venv/bin/dbt seed --profiles-dir .
-/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir .
-/usr/local/airflow/dbt_venv/bin/dbt test --profiles-dir .
-```
-
-Comando completo para recriar tudo:
-
-```bash
-cd /usr/local/airflow/dbt
-/usr/local/airflow/dbt_venv/bin/dbt deps --profiles-dir .
-/usr/local/airflow/dbt_venv/bin/dbt seed --profiles-dir .
-/usr/local/airflow/dbt_venv/bin/dbt run --profiles-dir . --full-refresh
-/usr/local/airflow/dbt_venv/bin/dbt test --profiles-dir .
-```
-
-## Ver o pipeline/grafo do dbt
-
-O comando que gera a documentacao e o grafo do dbt e:
-
-```bash
-dbt docs generate
-```
-
-Neste projeto, rode dentro do container:
-
-```powershell
-astro dev bash
-```
-
-Depois:
-
-```bash
-cd /usr/local/airflow/dbt
-/usr/local/airflow/dbt_venv/bin/dbt deps --profiles-dir .
-/usr/local/airflow/dbt_venv/bin/dbt docs generate --profiles-dir .
-```
-
-Isso cria os arquivos da documentacao em:
-
-```text
-dbt/target
-```
-
-Para abrir no navegador pelo Windows/PowerShell, em outro terminal local:
-
-```powershell
-cd "C:\Users\Felipe\Desktop\Felipe\Estudos\airflow-cosmos-dbt-elt\dbt\target"
-python -m http.server 8081
-```
-
-Abra:
-
-```text
-http://localhost:8081
-```
-
-Na pagina do dbt Docs, use a area de lineage/grafo para ver o pipeline visual.
 
 ## Estrutura principal
 
