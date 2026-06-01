@@ -1,0 +1,57 @@
+name: airflow_cosmos_dbt_elt
+version: "1.0"
+config-version: 2
+
+profile: airflow_cosmos_dbt_elt
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+
+models:
+  airflow_cosmos_dbt_elt:
+    staging:
+      +schema: dbt
+      +materialized: view
+    intermediate:
+      +schema: dbt
+      +materialized: table
+    marts:
+      +schema: dbt
+      +materialized: table
+
+seeds:
+  airflow_cosmos_dbt_elt:
+    +schema: dbt
+
+    banking_customers:
+      +column_types:
+        customer_id: integer
+        customer_name: varchar(120)
+        document_number: varchar(20)
+        birth_date: date
+        city: varchar(80)
+        state: varchar(2)
+        customer_segment: varchar(30)
+        created_at: date
+
+    banking_accounts:
+      +column_types:
+        account_id: integer
+        customer_id: integer
+        agency_number: integer
+        account_number: integer
+        account_type: varchar(30)
+        account_status: varchar(30)
+        opened_at: date
+
+    banking_transactions:
+      +column_types:
+        transaction_id: integer
+        account_id: integer
+        transaction_date: date
+        transaction_type: varchar(30)
+        channel: varchar(30)
+        amount: numeric(12,2)
+        currency: varchar(3)
+        status: varchar(30)

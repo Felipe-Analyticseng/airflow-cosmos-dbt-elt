@@ -1,0 +1,52 @@
+version: 2
+
+models:
+  - name: stg_banking__customers
+    description: "Staging model for banking customers."
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+          - unique
+      - name: customer_name
+        tests:
+          - not_null
+      - name: document_number
+        tests:
+          - not_null
+
+  - name: stg_banking__accounts
+    description: "Staging model for banking accounts."
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_banking__customers')
+              field: customer_id
+
+  - name: stg_banking__transactions
+    description: "Staging model for banking transactions."
+    columns:
+      - name: transaction_id
+        tests:
+          - not_null
+          - unique
+      - name: account_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_banking__accounts')
+              field: account_id
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['approved', 'pending', 'rejected']
+      - name: transaction_type
+        tests:
+          - accepted_values:
+              values: ['deposit', 'withdrawal', 'payment', 'transfer_in', 'transfer_out']

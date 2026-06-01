@@ -1,0 +1,59 @@
+version: 2
+
+models:
+  - name: dim_banking__customers
+    description: "Customer dimension with account summary."
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+          - unique
+      - name: document_number
+        tests:
+          - not_null
+
+  - name: dim_banking__accounts
+    description: "Account dimension with transaction summary and current balance."
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+          - unique
+      - name: customer_id
+        tests:
+          - not_null
+
+  - name: fct_banking__transactions
+    description: "Transaction fact table."
+    columns:
+      - name: transaction_id
+        tests:
+          - not_null
+          - unique
+      - name: account_id
+        tests:
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+
+  - name: mart_banking__customer_balance
+    description: "Analytical mart with customer balance metrics."
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+          - unique
+      - name: current_balance
+        tests:
+          - not_null
+
+  - name: mart_banking__daily_transactions
+    description: "Daily transaction mart by status and transaction type."
+    columns:
+      - name: transaction_date
+        tests:
+          - not_null
+      - name: total_transactions
+        tests:
+          - not_null
