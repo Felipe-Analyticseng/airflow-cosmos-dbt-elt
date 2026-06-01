@@ -53,6 +53,8 @@ A UI do Airflow fica em:
 http://localhost:8080
 ```
 
+Se a porta `8080` estiver ocupada, o Astro mostra outra URL no terminal, por exemplo `http://localhost:11131`.
+
 Login padrao:
 
 ```text

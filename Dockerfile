@@ -4,6 +4,6 @@ USER root
 
 RUN python -m venv /usr/local/airflow/dbt_venv \
     && /usr/local/airflow/dbt_venv/bin/pip install --no-cache-dir --upgrade pip \
-    && /usr/local/airflow/dbt_venv/bin/pip install --no-cache-dir dbt-postgres==1.10.0
+    && /usr/local/airflow/dbt_venv/bin/pip install --no-cache-dir dbt-core==1.9.0 dbt-postgres==1.9.0
 
 USER astro
